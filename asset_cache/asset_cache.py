@@ -9,7 +9,6 @@ This module provides functionality to:
 """
 
 import os
-import sys
 import shutil
 import logging
 from pathlib import Path

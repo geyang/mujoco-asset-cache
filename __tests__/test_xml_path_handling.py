@@ -1,8 +1,5 @@
 import os
 import sys
-import pytest
-from pathlib import Path
-import xml.etree.ElementTree as ET
 
 # Add the parent directory to sys.path to import from asset_cache
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

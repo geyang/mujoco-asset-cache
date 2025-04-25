@@ -4,13 +4,12 @@ import shutil
 import pytest
 from pathlib import Path
 import tempfile
-import xml.etree.ElementTree as ET
 
 # Add the parent directory to sys.path to import from asset_cache
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import functions from asset_cache
-from asset_cache.asset_cache import flatten_paths, extract_paths_from_xml, transform_xml_paths, create_asset_cache, AssetCache
+from asset_cache.asset_cache import flatten_paths, extract_paths_from_xml, create_asset_cache
 
 class TestAssetCache:
     @pytest.fixture
