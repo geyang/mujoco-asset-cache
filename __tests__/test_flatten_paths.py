@@ -6,93 +6,8 @@ from pathlib import Path
 # Add the parent directory to sys.path to import from asset_cache
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def flatten_paths(file_paths, base_dir=None, max_depth=None):
-    """
-    Find a structure that is as flat as possible while preserving relative folder relationships.
-    
-    Args:
-        file_paths: List of file paths to flatten
-        base_dir: Optional base directory to use as reference
-        max_depth: Maximum depth of parent directories to preserve (None for unlimited)
-        
-    Returns:
-        dict: Mapping from original paths to flattened paths
-    """
-    if not file_paths:
-        return {}
-    
-    # Convert all paths to Path objects for easier manipulation
-    paths = [Path(p) for p in file_paths]
-    
-    # Find common prefix among all paths if base_dir is not specified
-    if base_dir is None:
-        # Get the first path's parent as initial common_prefix
-        common_prefix = paths[0].parent
-        
-        # Iteratively find the common prefix
-        for path in paths[1:]:
-            parent = path.parent
-            # Find common parts between current common_prefix and this path's parent
-            common_parts = []
-            for part1, part2 in zip(common_prefix.parts, parent.parts):
-                if part1 == part2:
-                    common_parts.append(part1)
-                else:
-                    break
-            if common_parts:
-                common_prefix = Path(*common_parts)
-            else:
-                common_prefix = Path()
-                break
-    else:
-        common_prefix = Path(base_dir)
-    
-    # Create mapping from original paths to flattened paths
-    result = {}
-    
-    for original_path in paths:
-        # Skip if the path doesn't exist or isn't under common_prefix
-        if not str(original_path).startswith(str(common_prefix)) and common_prefix != Path():
-            result[str(original_path)] = str(original_path)
-            continue
-            
-        # Extract the relative path from the common prefix
-        if common_prefix == Path():
-            relative_path = original_path
-        else:
-            try:
-                relative_path = original_path.relative_to(common_prefix)
-            except ValueError:
-                # If not relative to common prefix, keep as is
-                result[str(original_path)] = str(original_path)
-                continue
-        
-        # Create a flattened path that preserves folder structure but is as flat as possible
-        # Replace directory separators with underscores or other safe characters
-        parts = relative_path.parts
-        
-        if len(parts) <= 1:
-            # No need to flatten if it's already flat
-            flattened = relative_path
-        else:
-            # Keep only the filename and prefix with parent folder names joined by underscores
-            # Last part is the filename, everything before that are directories
-            dirs = parts[:-1]
-            filename = parts[-1]
-            
-            # Apply max_depth if specified
-            if max_depth is not None and len(dirs) > max_depth:
-                # Keep only max_depth levels of directories
-                dirs = dirs[-max_depth:]
-            
-            # Join directory names with underscores
-            dir_prefix = "_".join(dirs)
-            flattened = Path(f"{dir_prefix}_{filename}")
-        
-        result[str(original_path)] = str(flattened)
-    
-    return result
-
+# Import flatten_paths from asset_cache module
+from asset_cache import flatten_paths
 
 class TestFlattenPaths:
     def test_empty_list(self):
@@ -206,7 +121,7 @@ class TestFlattenPaths:
         assert "textures_stone0.png" in result[paths[1]]
     
     def test_max_depth_parameter(self):
-        """Test preserving parent hierarchy up to max_depth."""
+        """Test preserving top-level parent hierarchy up to max_depth."""
         # Deep nested structure
         paths = [
             "models/robots/hand/fingers/index/tip.stl",
@@ -215,7 +130,7 @@ class TestFlattenPaths:
             "models/robots/arm/joints/elbow.stl",
         ]
         
-        # Default behavior (no max_depth) should preserve just the last component of the path
+        # Default behavior (no max_depth) should flatten everything to a single level
         result_default = flatten_paths(paths)
         expected_default = {
             "models/robots/hand/fingers/index/tip.stl": "index_tip.stl",
@@ -225,53 +140,53 @@ class TestFlattenPaths:
         }
         assert result_default == expected_default
         
-        # With max_depth=1, should keep only the immediate parent
+        # With max_depth=1, preserve the top directory ("models")
         result_depth1 = flatten_paths(paths, max_depth=1)
         expected_depth1 = {
-            "models/robots/hand/fingers/index/tip.stl": "index_tip.stl",
-            "models/robots/hand/fingers/thumb/tip.stl": "thumb_tip.stl",
-            "models/robots/arm/joints/shoulder.stl": "joints_shoulder.stl",
-            "models/robots/arm/joints/elbow.stl": "joints_elbow.stl",
+            "models/robots/hand/fingers/index/tip.stl": "models/robots_hand_fingers_index_tip.stl",
+            "models/robots/hand/fingers/thumb/tip.stl": "models/robots_hand_fingers_thumb_tip.stl",
+            "models/robots/arm/joints/shoulder.stl": "models/robots_arm_joints_shoulder.stl",
+            "models/robots/arm/joints/elbow.stl": "models/robots_arm_joints_elbow.stl",
         }
         assert result_depth1 == expected_depth1
         
-        # With max_depth=2, should keep two levels of parents
+        # With max_depth=2, preserve two levels ("models/robots")
         result_depth2 = flatten_paths(paths, max_depth=2)
         expected_depth2 = {
-            "models/robots/hand/fingers/index/tip.stl": "fingers_index_tip.stl",
-            "models/robots/hand/fingers/thumb/tip.stl": "fingers_thumb_tip.stl",
-            "models/robots/arm/joints/shoulder.stl": "arm_joints_shoulder.stl",
-            "models/robots/arm/joints/elbow.stl": "arm_joints_elbow.stl",
+            "models/robots/hand/fingers/index/tip.stl": "models/robots/hand_fingers_index_tip.stl",
+            "models/robots/hand/fingers/thumb/tip.stl": "models/robots/hand_fingers_thumb_tip.stl",
+            "models/robots/arm/joints/shoulder.stl": "models/robots/arm_joints_shoulder.stl",
+            "models/robots/arm/joints/elbow.stl": "models/robots/arm_joints_elbow.stl",
         }
         assert result_depth2 == expected_depth2
         
-        # With max_depth=3, should keep three levels of parents
+        # With max_depth=3, preserve three levels ("models/robots/hand" or "models/robots/arm")
         result_depth3 = flatten_paths(paths, max_depth=3)
         expected_depth3 = {
-            "models/robots/hand/fingers/index/tip.stl": "hand_fingers_index_tip.stl",
-            "models/robots/hand/fingers/thumb/tip.stl": "hand_fingers_thumb_tip.stl",
-            "models/robots/arm/joints/shoulder.stl": "robots_arm_joints_shoulder.stl",
-            "models/robots/arm/joints/elbow.stl": "robots_arm_joints_elbow.stl",
+            "models/robots/hand/fingers/index/tip.stl": "models/robots/hand/fingers_index_tip.stl",
+            "models/robots/hand/fingers/thumb/tip.stl": "models/robots/hand/fingers_thumb_tip.stl",
+            "models/robots/arm/joints/shoulder.stl": "models/robots/arm/joints_shoulder.stl",
+            "models/robots/arm/joints/elbow.stl": "models/robots/arm/joints_elbow.stl",
         }
         assert result_depth3 == expected_depth3
         
-        # With max_depth=4, should keep four levels of parents
+        # With max_depth=4, preserve four levels (almost the entire path)
         result_depth4 = flatten_paths(paths, max_depth=4)
         expected_depth4 = {
+            "models/robots/hand/fingers/index/tip.stl": "models/robots/hand/fingers/index_tip.stl",
+            "models/robots/hand/fingers/thumb/tip.stl": "models/robots/hand/fingers/thumb_tip.stl",
+            "models/robots/arm/joints/shoulder.stl": "models/robots/arm/joints/shoulder.stl",
+            "models/robots/arm/joints/elbow.stl": "models/robots/arm/joints/elbow.stl",
+        }
+        assert result_depth4 == expected_depth4
+        
+        # With max_depth=0, default behavior (just flatten everything)
+        result_depth0 = flatten_paths(paths, max_depth=0)
+        expected_depth0 = {
             "models/robots/hand/fingers/index/tip.stl": "models_robots_hand_fingers_index_tip.stl",
             "models/robots/hand/fingers/thumb/tip.stl": "models_robots_hand_fingers_thumb_tip.stl",
             "models/robots/arm/joints/shoulder.stl": "models_robots_arm_joints_shoulder.stl",
             "models/robots/arm/joints/elbow.stl": "models_robots_arm_joints_elbow.stl",
-        }
-        assert result_depth4 == expected_depth4
-        
-        # With max_depth=0, should act as if all directory structure is flattened (just the filename)
-        result_depth0 = flatten_paths(paths, max_depth=0)
-        expected_depth0 = {
-            "models/robots/hand/fingers/index/tip.stl": "tip.stl",
-            "models/robots/hand/fingers/thumb/tip.stl": "tip.stl",  # Note: this will conflict!
-            "models/robots/arm/joints/shoulder.stl": "shoulder.stl",
-            "models/robots/arm/joints/elbow.stl": "elbow.stl",
         }
         assert result_depth0 == expected_depth0
     
@@ -294,33 +209,43 @@ class TestFlattenPaths:
         }
         assert result_default == expected_default
         
+        # With max_depth=1, preserve the top directory
+        result_depth1 = flatten_paths(paths, max_depth=1)
+        expected_depth1 = {
+            "project/category1/subcategory1/group1/item1.txt": "project/category1_subcategory1_group1_item1.txt",
+            "project/category1/subcategory1/group2/item2.txt": "project/category1_subcategory1_group2_item2.txt",
+            "project/category1/subcategory2/group1/item3.txt": "project/category1_subcategory2_group1_item3.txt",
+            "project/category2/subcategory1/group1/item4.txt": "project/category2_subcategory1_group1_item4.txt",
+        }
+        assert result_depth1 == expected_depth1
+        
         # With max_depth=2, preserve two levels
         result_depth2 = flatten_paths(paths, max_depth=2)
         expected_depth2 = {
-            "project/category1/subcategory1/group1/item1.txt": "subcategory1_group1_item1.txt",
-            "project/category1/subcategory1/group2/item2.txt": "subcategory1_group2_item2.txt",
-            "project/category1/subcategory2/group1/item3.txt": "subcategory2_group1_item3.txt",
-            "project/category2/subcategory1/group1/item4.txt": "subcategory1_group1_item4.txt",
+            "project/category1/subcategory1/group1/item1.txt": "project/category1/subcategory1_group1_item1.txt",
+            "project/category1/subcategory1/group2/item2.txt": "project/category1/subcategory1_group2_item2.txt",
+            "project/category1/subcategory2/group1/item3.txt": "project/category1/subcategory2_group1_item3.txt",
+            "project/category2/subcategory1/group1/item4.txt": "project/category2/subcategory1_group1_item4.txt",
         }
         assert result_depth2 == expected_depth2
         
         # With max_depth=3, preserve three levels
         result_depth3 = flatten_paths(paths, max_depth=3)
         expected_depth3 = {
-            "project/category1/subcategory1/group1/item1.txt": "category1_subcategory1_group1_item1.txt",
-            "project/category1/subcategory1/group2/item2.txt": "category1_subcategory1_group2_item2.txt",
-            "project/category1/subcategory2/group1/item3.txt": "category1_subcategory2_group1_item3.txt",
-            "project/category2/subcategory1/group1/item4.txt": "category2_subcategory1_group1_item4.txt",
+            "project/category1/subcategory1/group1/item1.txt": "project/category1/subcategory1/group1_item1.txt",
+            "project/category1/subcategory1/group2/item2.txt": "project/category1/subcategory1/group2_item2.txt",
+            "project/category1/subcategory2/group1/item3.txt": "project/category1/subcategory2/group1_item3.txt",
+            "project/category2/subcategory1/group1/item4.txt": "project/category2/subcategory1/group1_item4.txt",
         }
         assert result_depth3 == expected_depth3
         
-        # With max_depth=4, preserve all levels (project + category + subcategory + group)
+        # With max_depth=4, preserve all levels (just the filename is separated)
         result_depth4 = flatten_paths(paths, max_depth=4)
         expected_depth4 = {
-            "project/category1/subcategory1/group1/item1.txt": "project_category1_subcategory1_group1_item1.txt",
-            "project/category1/subcategory1/group2/item2.txt": "project_category1_subcategory1_group2_item2.txt",
-            "project/category1/subcategory2/group1/item3.txt": "project_category1_subcategory2_group1_item3.txt",
-            "project/category2/subcategory1/group1/item4.txt": "project_category2_subcategory1_group1_item4.txt",
+            "project/category1/subcategory1/group1/item1.txt": "project/category1/subcategory1/group1/item1.txt",
+            "project/category1/subcategory1/group2/item2.txt": "project/category1/subcategory1/group2/item2.txt",
+            "project/category1/subcategory2/group1/item3.txt": "project/category1/subcategory2/group1/item3.txt",
+            "project/category2/subcategory1/group1/item4.txt": "project/category2/subcategory1/group1/item4.txt",
         }
         assert result_depth4 == expected_depth4
     
@@ -331,23 +256,20 @@ class TestFlattenPaths:
             "project/models/foot/fingers/index/tip.stl",
         ]
         
-        # With max_depth=1, we'll have a conflict as both end up with index_tip.stl
+        # With max_depth=1, we still have a conflict since it only preserves the first level
         result_depth1 = flatten_paths(paths, max_depth=1)
-        assert result_depth1["project/models/hand/fingers/index/tip.stl"] == "index_tip.stl"
-        assert result_depth1["project/models/foot/fingers/index/tip.stl"] == "index_tip.stl"
-        # This is a name conflict that would need resolution in a real implementation
+        assert result_depth1["project/models/hand/fingers/index/tip.stl"] == "project/models_hand_fingers_index_tip.stl"
+        assert result_depth1["project/models/foot/fingers/index/tip.stl"] == "project/models_foot_fingers_index_tip.stl"
         
-        # With max_depth=2, the files still have the same pattern
+        # With max_depth=2, we preserve two levels which differentiates the files
         result_depth2 = flatten_paths(paths, max_depth=2)
-        assert result_depth2["project/models/hand/fingers/index/tip.stl"] == "fingers_index_tip.stl"
-        assert result_depth2["project/models/foot/fingers/index/tip.stl"] == "fingers_index_tip.stl"
-        # Still a conflict, need to go deeper to resolve
+        assert result_depth2["project/models/hand/fingers/index/tip.stl"] == "project/models/hand_fingers_index_tip.stl"
+        assert result_depth2["project/models/foot/fingers/index/tip.stl"] == "project/models/foot_fingers_index_tip.stl"
         
-        # With max_depth=3, the conflict is fully resolved by including the parent directory
+        # With max_depth=3, we can see more of the path structure
         result_depth3 = flatten_paths(paths, max_depth=3)
-        assert result_depth3["project/models/hand/fingers/index/tip.stl"] == "hand_fingers_index_tip.stl"
-        assert result_depth3["project/models/foot/fingers/index/tip.stl"] == "foot_fingers_index_tip.stl"
-        # No more conflicts
+        assert result_depth3["project/models/hand/fingers/index/tip.stl"] == "project/models/hand/fingers_index_tip.stl"
+        assert result_depth3["project/models/foot/fingers/index/tip.stl"] == "project/models/foot/fingers_index_tip.stl"
     
     def test_conflict_detection_examples(self):
         """Test with examples that demonstrate how to detect and potentially resolve conflicts."""
@@ -367,12 +289,23 @@ class TestFlattenPaths:
         assert result_default["repo/project1/modules/profile/avatar.png"] == "profile_avatar.png"
         assert result_default["repo/project2/modules/profile/avatar.png"] == "profile_avatar.png"
         
-        # With max_depth=3, we can resolve these conflicts
-        result_depth3 = flatten_paths(paths, max_depth=3)
-        assert result_depth3["repo/project1/modules/auth/login.py"] == "project1_modules_auth_login.py"
-        assert result_depth3["repo/project2/modules/auth/login.py"] == "project2_modules_auth_login.py"
-        assert result_depth3["repo/project1/modules/profile/avatar.png"] == "project1_modules_profile_avatar.png"
-        assert result_depth3["repo/project2/modules/profile/avatar.png"] == "project2_modules_profile_avatar.png"
+        # With max_depth=1, we preserve the repo directory
+        result_depth1 = flatten_paths(paths, max_depth=1)
+        assert result_depth1["repo/project1/modules/auth/login.py"] == "repo/project1_modules_auth_login.py"
+        assert result_depth1["repo/project2/modules/auth/login.py"] == "repo/project2_modules_auth_login.py"
+        assert result_depth1["repo/project1/modules/profile/avatar.png"] == "repo/project1_modules_profile_avatar.png"
+        assert result_depth1["repo/project2/modules/profile/avatar.png"] == "repo/project2_modules_profile_avatar.png"
         
-        # A real implementation might need to detect conflicts and automatically increase max_depth
-        # or add a unique suffix to resolve conflicts 
+        # With max_depth=2, we preserve repo/project1 and repo/project2 directories
+        result_depth2 = flatten_paths(paths, max_depth=2)
+        assert result_depth2["repo/project1/modules/auth/login.py"] == "repo/project1/modules_auth_login.py"
+        assert result_depth2["repo/project2/modules/auth/login.py"] == "repo/project2/modules_auth_login.py"
+        assert result_depth2["repo/project1/modules/profile/avatar.png"] == "repo/project1/modules_profile_avatar.png"
+        assert result_depth2["repo/project2/modules/profile/avatar.png"] == "repo/project2/modules_profile_avatar.png"
+        
+        # With max_depth=3, we preserve even more structure
+        result_depth3 = flatten_paths(paths, max_depth=3)
+        assert result_depth3["repo/project1/modules/auth/login.py"] == "repo/project1/modules/auth_login.py"
+        assert result_depth3["repo/project2/modules/auth/login.py"] == "repo/project2/modules/auth_login.py"
+        assert result_depth3["repo/project1/modules/profile/avatar.png"] == "repo/project1/modules/profile_avatar.png"
+        assert result_depth3["repo/project2/modules/profile/avatar.png"] == "repo/project2/modules/profile_avatar.png" 

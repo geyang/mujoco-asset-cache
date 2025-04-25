@@ -9,9 +9,8 @@ import xml.etree.ElementTree as ET
 # Add the parent directory to sys.path to import from asset_cache
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import the functions from the other test files
-from tests.test_flatten_paths import flatten_paths
-from tests.test_xml_path_handling import extract_paths_from_xml, transform_xml_paths
+# Import functions from asset_cache
+from asset_cache import flatten_paths, extract_paths_from_xml, transform_xml_paths, create_asset_cache
 
 def create_asset_cache(xml_file, output_dir, asset_dir=None):
     """

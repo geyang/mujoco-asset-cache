@@ -7,50 +7,8 @@ import xml.etree.ElementTree as ET
 # Add the parent directory to sys.path to import from asset_cache
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import the flatten_paths function from the other test file
-from tests.test_flatten_paths import flatten_paths
-
-def extract_paths_from_xml(xml_string):
-    """
-    Extract file paths from XML string, focusing on file attributes.
-    
-    Args:
-        xml_string: XML content as string
-        
-    Returns:
-        list: List of file paths found in the XML
-    """
-    paths = []
-    root = ET.fromstring(xml_string)
-    
-    # Find all elements with 'file' attribute
-    for elem in root.findall('.//*[@file]'):
-        file_path = elem.get('file')
-        if file_path:
-            paths.append(file_path)
-    
-    return paths
-
-def transform_xml_paths(xml_string, path_map):
-    """
-    Replace file paths in XML with their flattened versions.
-    
-    Args:
-        xml_string: XML content as string
-        path_map: Dictionary mapping original paths to flattened paths
-        
-    Returns:
-        str: XML content with updated paths
-    """
-    root = ET.fromstring(xml_string)
-    
-    # Find all elements with 'file' attribute
-    for elem in root.findall('.//*[@file]'):
-        file_path = elem.get('file')
-        if file_path and file_path in path_map:
-            elem.set('file', path_map[file_path])
-    
-    return ET.tostring(root, encoding='unicode')
+# Import functions from asset_cache
+from asset_cache import flatten_paths, extract_paths_from_xml, transform_xml_paths
 
 class TestXMLPathHandling:
     def test_extract_paths(self):

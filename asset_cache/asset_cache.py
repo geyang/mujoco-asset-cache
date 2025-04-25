@@ -26,7 +26,7 @@ def flatten_paths(file_paths, base_dir=None, max_depth=None):
     Args:
         file_paths: List of file paths to flatten
         base_dir: Optional base directory to use as reference
-        max_depth: Maximum depth of parent directories to preserve (None for unlimited)
+        max_depth: Maximum number of top-level directories to preserve intact (None for default behavior)
         
     Returns:
         dict: Mapping from original paths to flattened paths
@@ -81,26 +81,38 @@ def flatten_paths(file_paths, base_dir=None, max_depth=None):
                 continue
         
         # Create a flattened path that preserves folder structure but is as flat as possible
-        # Replace directory separators with underscores or other safe characters
         parts = relative_path.parts
         
         if len(parts) <= 1:
             # No need to flatten if it's already flat
             flattened = relative_path
         else:
-            # Keep only the filename and prefix with parent folder names joined by underscores
-            # Last part is the filename, everything before that are directories
-            dirs = parts[:-1]
-            filename = parts[-1]
-            
-            # Apply max_depth if specified
-            if max_depth is not None and len(dirs) > max_depth:
-                # Keep only max_depth levels of directories
-                dirs = dirs[-max_depth:]
-            
-            # Join directory names with underscores
-            dir_prefix = "_".join(dirs)
-            flattened = Path(f"{dir_prefix}_{filename}")
+            # If max_depth is specified, preserve top directories intact
+            if max_depth is not None and max_depth > 0:
+                # Keep max_depth top directories intact
+                if len(parts) > max_depth + 1:  # +1 for the filename
+                    # Keep initial directories intact, flatten the rest
+                    top_dirs = os.path.join(*parts[:max_depth])
+                    # remaining directories become flattened with underscores
+                    remaining_dirs = "_".join(parts[max_depth:-1])
+                    filename = parts[-1]
+                    
+                    if remaining_dirs:
+                        flattened = Path(f"{top_dirs}/{remaining_dirs}_{filename}")
+                    else:
+                        flattened = Path(f"{top_dirs}/{filename}")
+                else:
+                    # If the path is already shorter than max_depth, keep it as is
+                    flattened = relative_path
+            else:
+                # Default behavior: keep only the filename and prefix with parent folder names joined by underscores
+                # Last part is the filename, everything before that are directories
+                dirs = parts[:-1]
+                filename = parts[-1]
+                
+                # Join directory names with underscores
+                dir_prefix = "_".join(dirs)
+                flattened = Path(f"{dir_prefix}_{filename}")
         
         result[str(original_path)] = str(flattened)
     

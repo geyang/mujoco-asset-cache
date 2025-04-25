@@ -70,42 +70,45 @@ The flattening process works by:
 
 1. Identifying the common prefix among all paths
 2. Creating a flattened structure where:
-   - Directory separators are replaced with underscores
+   - Top-level directories are preserved according to max_depth
+   - Remaining directories are joined with underscores
    - The filename is preserved
-   - The folder hierarchy is encoded in the filename prefix
 
 For example:
 
 ```
-assets/models/robot/hand.stl -> robot_hand.stl  # default behavior
-assets/textures/wood.png -> textures_wood.png   # default behavior
+# Default behavior (no max_depth)
+assets/models/robot/hand.stl -> robot_hand.stl
+assets/textures/wood.png -> textures_wood.png
+
+# With max_depth=1:
+models/robots/arm/joints/elbow.stl -> models/robots_arm_joints_elbow.stl
+models/robots/hand/fingers/index/tip.stl -> models/robots_hand_fingers_index_tip.stl
 
 # With max_depth=2:
-models/robots/arm/joints/elbow.stl -> arm_joints_elbow.stl
-models/robots/hand/fingers/index/tip.stl -> fingers_index_tip.stl
+models/robots/arm/joints/elbow.stl -> models/robots/arm_joints_elbow.stl
+repo/project1/modules/auth/login.py -> repo/project1/modules_auth_login.py
 ```
 
 This makes the structure as flat as possible while still preserving the relationships between files.
 
 ### Controlling Directory Depth with max_depth
 
-The `max_depth` parameter allows you to control how many levels of parent directories to preserve:
+The `max_depth` parameter allows you to control how many top-level directories to preserve intact:
 
-- `max_depth=0`: Keep only the filename (e.g., `hand.stl`)
-- `max_depth=1`: Keep the immediate parent directory (e.g., `robot_hand.stl`)
-- `max_depth=2`: Keep two levels of parent directories (e.g., `models_robot_hand.stl`)
-- `max_depth=None` (default): Automatically determine the best flattening strategy
+- `max_depth=0`: Flatten all directories with underscores (e.g., `models_robots_hand_index.stl`)
+- `max_depth=1`: Keep the first directory level intact (e.g., `models/robots_hand_index.stl`)
+- `max_depth=2`: Keep the first two directory levels intact (e.g., `models/robots/hand_index.stl`)
+- `max_depth=None` (default): Flatten everything except the immediate parent (e.g., `index.stl`)
 
-Increasing the `max_depth` helps resolve filename conflicts when multiple files with the same name exist in different directories.
+Increasing the `max_depth` helps maintain more of the original directory structure while still creating a flatter organization than the original. This approach is particularly useful for:
+
+1. **Avoiding filename conflicts** - By preserving more of the path, you ensure files with the same name from different directories remain distinct
+2. **Maintaining logical grouping** - You can keep important organizational structures while flattening less important ones
+3. **Simplifying complex hierarchies** - Works well with very deep nested folders by preserving the most important top levels
 
 ## Tests
 
 Run the tests with pytest:
 
-```bash
-pytest
 ```
-
-## License
-
-MIT 
