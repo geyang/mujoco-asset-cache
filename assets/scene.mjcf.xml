@@ -1,0 +1,9 @@
+<mujoco model="scene">
+  <include file="vuer-mug/mug.xml"/>
+  <include file="wooden_mug_tree/mug_rack.xml"/>
+
+  <worldbody>
+<!--    <light pos=".4 -.4 .3" dir="-2 2 -1.5" diffuse=".6 .6 .6"/>-->
+<!--    <light pos="-.2 -.4 .3" dir="1 2 -1.5" diffuse=".6 .6 .6"/>-->
+  </worldbody>
+</mujoco>
