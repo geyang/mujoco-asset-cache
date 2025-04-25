@@ -215,7 +215,7 @@ class TestFlattenPaths:
             "models/robots/arm/joints/elbow.stl",
         ]
         
-        # Default behavior (no max_depth) should flatten everything to a single level
+        # Default behavior (no max_depth) should preserve just the last component of the path
         result_default = flatten_paths(paths)
         expected_default = {
             "models/robots/hand/fingers/index/tip.stl": "index_tip.stl",
@@ -255,7 +255,17 @@ class TestFlattenPaths:
         }
         assert result_depth3 == expected_depth3
         
-        # With max_depth=0, should act as if all directory structure is flattened
+        # With max_depth=4, should keep four levels of parents
+        result_depth4 = flatten_paths(paths, max_depth=4)
+        expected_depth4 = {
+            "models/robots/hand/fingers/index/tip.stl": "models_robots_hand_fingers_index_tip.stl",
+            "models/robots/hand/fingers/thumb/tip.stl": "models_robots_hand_fingers_thumb_tip.stl",
+            "models/robots/arm/joints/shoulder.stl": "models_robots_arm_joints_shoulder.stl",
+            "models/robots/arm/joints/elbow.stl": "models_robots_arm_joints_elbow.stl",
+        }
+        assert result_depth4 == expected_depth4
+        
+        # With max_depth=0, should act as if all directory structure is flattened (just the filename)
         result_depth0 = flatten_paths(paths, max_depth=0)
         expected_depth0 = {
             "models/robots/hand/fingers/index/tip.stl": "tip.stl",
@@ -304,7 +314,7 @@ class TestFlattenPaths:
         }
         assert result_depth3 == expected_depth3
         
-        # With max_depth=4, preserve all levels
+        # With max_depth=4, preserve all levels (project + category + subcategory + group)
         result_depth4 = flatten_paths(paths, max_depth=4)
         expected_depth4 = {
             "project/category1/subcategory1/group1/item1.txt": "project_category1_subcategory1_group1_item1.txt",
@@ -325,16 +335,44 @@ class TestFlattenPaths:
         result_depth1 = flatten_paths(paths, max_depth=1)
         assert result_depth1["project/models/hand/fingers/index/tip.stl"] == "index_tip.stl"
         assert result_depth1["project/models/foot/fingers/index/tip.stl"] == "index_tip.stl"
-        # Note: In a real implementation, we would need conflict resolution logic
+        # This is a name conflict that would need resolution in a real implementation
         
-        # With max_depth=2, the conflict is resolved
+        # With max_depth=2, the files still have the same pattern
         result_depth2 = flatten_paths(paths, max_depth=2)
         assert result_depth2["project/models/hand/fingers/index/tip.stl"] == "fingers_index_tip.stl"
         assert result_depth2["project/models/foot/fingers/index/tip.stl"] == "fingers_index_tip.stl"
-        # Still have a conflict
+        # Still a conflict, need to go deeper to resolve
         
-        # With max_depth=3, the conflict is fully resolved
+        # With max_depth=3, the conflict is fully resolved by including the parent directory
         result_depth3 = flatten_paths(paths, max_depth=3)
         assert result_depth3["project/models/hand/fingers/index/tip.stl"] == "hand_fingers_index_tip.stl"
         assert result_depth3["project/models/foot/fingers/index/tip.stl"] == "foot_fingers_index_tip.stl"
-        # No more conflicts 
+        # No more conflicts
+    
+    def test_conflict_detection_examples(self):
+        """Test with examples that demonstrate how to detect and potentially resolve conflicts."""
+        paths = [
+            "repo/project1/modules/auth/login.py",
+            "repo/project2/modules/auth/login.py",
+            "repo/project1/modules/profile/avatar.png",
+            "repo/project2/modules/profile/avatar.png",
+        ]
+        
+        # With default behavior, these files will have conflicts
+        result_default = flatten_paths(paths)
+        
+        # Same filenames for different projects
+        assert result_default["repo/project1/modules/auth/login.py"] == "auth_login.py"
+        assert result_default["repo/project2/modules/auth/login.py"] == "auth_login.py"
+        assert result_default["repo/project1/modules/profile/avatar.png"] == "profile_avatar.png"
+        assert result_default["repo/project2/modules/profile/avatar.png"] == "profile_avatar.png"
+        
+        # With max_depth=3, we can resolve these conflicts
+        result_depth3 = flatten_paths(paths, max_depth=3)
+        assert result_depth3["repo/project1/modules/auth/login.py"] == "project1_modules_auth_login.py"
+        assert result_depth3["repo/project2/modules/auth/login.py"] == "project2_modules_auth_login.py"
+        assert result_depth3["repo/project1/modules/profile/avatar.png"] == "project1_modules_profile_avatar.png"
+        assert result_depth3["repo/project2/modules/profile/avatar.png"] == "project2_modules_profile_avatar.png"
+        
+        # A real implementation might need to detect conflicts and automatically increase max_depth
+        # or add a unique suffix to resolve conflicts 
