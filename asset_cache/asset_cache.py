@@ -112,7 +112,9 @@ def flatten_paths(file_paths, base_dir=None, max_depth=None):
                     try:
                         asset_idx = parts.index('assets')
                         if asset_idx < len(parts) - 2:  # assets + component + filename
-                            result[path] = f"{parts[asset_idx + 1]}_{parts[-1]}"
+                            # We want to use the immediate parent directory of the file
+                            # not the directory right after 'assets'
+                            result[path] = f"{parts[-2]}_{parts[-1]}"
                         else:
                             result[path] = parts[-1]
                     except ValueError:
