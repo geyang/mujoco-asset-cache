@@ -10,13 +10,13 @@ from .asset_cache import (
     extract_paths_from_xml,
     transform_xml_paths,
     create_asset_cache,
-    AssetCache
+    AssetCache,
 )
 
 __all__ = [
-    'flatten_paths',
-    'extract_paths_from_xml',
-    'transform_xml_paths',
-    'create_asset_cache',
-    'AssetCache'
-] 
+    "flatten_paths",
+    "extract_paths_from_xml",
+    "transform_xml_paths",
+    "create_asset_cache",
+    "AssetCache",
+]
