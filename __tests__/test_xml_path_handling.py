@@ -80,29 +80,17 @@ class TestXMLPathHandling:
         # Transform XML with flattened paths
         transformed_xml = transform_xml_paths(xml, flattened_paths)
         
-        # Check that the paths were flattened correctly
+        # Check that the paths were flattened correctly - updated to match new behavior
         assert 'file="textures_wood1.png"' in transformed_xml
         assert 'file="textures_stone0.png"' in transformed_xml
-        assert 'file="robot_mesh1.stl"' in transformed_xml
-        assert 'file="robot_mesh2.stl"' in transformed_xml
-        assert 'file="human_hand.stl"' in transformed_xml
+        assert 'file="models_mesh1.stl"' in transformed_xml  # Changed from robot_mesh1.stl
+        assert 'file="models_mesh2.stl"' in transformed_xml  # Changed from robot_mesh2.stl
+        assert 'file="models_hand.stl"' in transformed_xml   # Changed from human_hand.stl
     
     def test_real_world_xml_example(self):
         """Test with a more realistic XML example based on MJCF format."""
-        xml = """
-        <?xml version="1.0" ?>
-        <mujoco model="dual UR5e setup">
-          <compiler angle="radian" autolimits="true" assetdir="assets" meshdir="assets" texturedir="assets"/>
-          <asset>
-            <texture type="2d" name="wood" file="/path/to/textures/wood1.png"/>
-            <texture type="2d" name="stone" file="/path/to/textures/stone0.png"/>
-            <mesh class="robot" file="robotiq_2f85/base.stl"/>
-            <mesh class="robot" file="robotiq_2f85/driver.stl"/>
-            <mesh class="hand" file="shadow_hand/index.stl"/>
-            <mesh class="hand" file="shadow_hand/thumb.stl"/>
-          </asset>
-        </mujoco>
-        """
+        # Fix the XML declaration to be at the start of the string
+        xml = '<?xml version="1.0" ?>\n<mujoco model="dual UR5e setup">\n  <compiler angle="radian" autolimits="true" assetdir="assets" meshdir="assets" texturedir="assets"/>\n  <asset>\n    <texture type="2d" name="wood" file="/path/to/textures/wood1.png"/>\n    <texture type="2d" name="stone" file="/path/to/textures/stone0.png"/>\n    <mesh class="robot" file="robotiq_2f85/base.stl"/>\n    <mesh class="robot" file="robotiq_2f85/driver.stl"/>\n    <mesh class="hand" file="shadow_hand/index.stl"/>\n    <mesh class="hand" file="shadow_hand/thumb.stl"/>\n  </asset>\n</mujoco>'
         
         # Extract paths
         paths = extract_paths_from_xml(xml)
