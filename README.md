@@ -12,8 +12,7 @@ A smart utility that flattens complex asset structures for XML files (like MJCF)
 ## 🚀 Installation
 
 ```bash
-git clone https://github.com/geyang/mujoco-asset-cache.git
-cd mujoco-asset-cache
+pip install git+https://github.com/vuer-ai/mujoco-asset-cache.git
 ```
 
 ## 💻 Usage
@@ -21,17 +20,17 @@ cd mujoco-asset-cache
 ### Command Line
 
 ```bash
-python -m asset_cache.asset_cache your_file.xml --cache-dir ./my_cache --asset-dir ./assets
+python -m asset_cache.asset_cache your_file.xml --cache-dir ./my_cache --asset-dir ./assets --max-depth 2
 ```
 
 ### Python Module
 
 ```python
-from asset_cache import AssetCache
+from asset_cache.asset_cache import AssetCache
 
 # Simple usage
 cache = AssetCache(cache_dir="./my_cache")
-transformed_xml = cache.process_xml("your_file.xml", asset_dir="./assets")
+transformed_xml = cache.process_xml("your_file.xml", asset_dir="./assets", max_depth=2)
 ```
 
 ## 🛠️ How It Works
@@ -81,6 +80,18 @@ paths = [
 
 # With max_depth=2:
 # "models/robots/hand_fingers_index_tip.stl", "models/robots/hand_fingers_thumb_tip.stl" 
+```
+
+### Handling Absolute Paths
+
+The library intelligently handles absolute paths, preserving the immediate parent directory:
+
+```python
+# Original:
+# /path/to/assets/models/robot/hand.stl
+
+# Flattened:
+# robot_hand.stl
 ```
 
 ## 📝 Testing
