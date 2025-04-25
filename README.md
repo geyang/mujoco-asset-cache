@@ -25,7 +25,7 @@ cd vibe_xml
 ### Command Line Interface
 
 ```bash
-python -m asset_cache.asset_cache your_file.xml --cache-dir ./my_cache --asset-dir ./assets
+python -m asset_cache.asset_cache your_file.xml --cache-dir ./my_cache --asset-dir ./assets --max-depth 2
 ```
 
 ### As a Python Module
@@ -37,7 +37,7 @@ from asset_cache import AssetCache
 cache = AssetCache(cache_dir="./my_cache")
 
 # Process an XML file
-transformed_xml = cache.process_xml("your_file.xml", asset_dir="./assets")
+transformed_xml = cache.process_xml("your_file.xml", asset_dir="./assets", max_depth=2)
 ```
 
 ### Lower-level Functions
@@ -52,14 +52,15 @@ with open("your_file.xml", "r") as f:
     xml_content = f.read()
 paths = extract_paths_from_xml(xml_content)
 
-# Flatten paths
-flattened_paths = flatten_paths(paths, base_dir="./assets")
+# Flatten paths with custom max_depth
+flattened_paths = flatten_paths(paths, base_dir="./assets", max_depth=2)
 
 # For complete processing including copying files
 transformed_xml_path, copied_paths = create_asset_cache(
     "your_file.xml", 
     output_dir="./my_cache",
-    asset_dir="./assets"
+    asset_dir="./assets",
+    max_depth=2
 )
 ```
 
@@ -76,11 +77,26 @@ The flattening process works by:
 For example:
 
 ```
-assets/models/robot/hand.stl -> robot_hand.stl
-assets/textures/wood.png -> textures_wood.png
+assets/models/robot/hand.stl -> robot_hand.stl  # default behavior
+assets/textures/wood.png -> textures_wood.png   # default behavior
+
+# With max_depth=2:
+models/robots/arm/joints/elbow.stl -> arm_joints_elbow.stl
+models/robots/hand/fingers/index/tip.stl -> fingers_index_tip.stl
 ```
 
 This makes the structure as flat as possible while still preserving the relationships between files.
+
+### Controlling Directory Depth with max_depth
+
+The `max_depth` parameter allows you to control how many levels of parent directories to preserve:
+
+- `max_depth=0`: Keep only the filename (e.g., `hand.stl`)
+- `max_depth=1`: Keep the immediate parent directory (e.g., `robot_hand.stl`)
+- `max_depth=2`: Keep two levels of parent directories (e.g., `models_robot_hand.stl`)
+- `max_depth=None` (default): Automatically determine the best flattening strategy
+
+Increasing the `max_depth` helps resolve filename conflicts when multiple files with the same name exist in different directories.
 
 ## Tests
 

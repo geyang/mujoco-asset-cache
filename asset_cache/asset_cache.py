@@ -19,13 +19,14 @@ import xml.etree.ElementTree as ET
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def flatten_paths(file_paths, base_dir=None):
+def flatten_paths(file_paths, base_dir=None, max_depth=None):
     """
     Find a structure that is as flat as possible while preserving relative folder relationships.
     
     Args:
         file_paths: List of file paths to flatten
         base_dir: Optional base directory to use as reference
+        max_depth: Maximum depth of parent directories to preserve (None for unlimited)
         
     Returns:
         dict: Mapping from original paths to flattened paths
@@ -92,6 +93,11 @@ def flatten_paths(file_paths, base_dir=None):
             dirs = parts[:-1]
             filename = parts[-1]
             
+            # Apply max_depth if specified
+            if max_depth is not None and len(dirs) > max_depth:
+                # Keep only max_depth levels of directories
+                dirs = dirs[-max_depth:]
+            
             # Join directory names with underscores
             dir_prefix = "_".join(dirs)
             flattened = Path(f"{dir_prefix}_{filename}")
@@ -145,7 +151,7 @@ def transform_xml_paths(xml_string, path_map):
     return ET.tostring(root, encoding='unicode')
 
 
-def create_asset_cache(xml_file, output_dir, asset_dir=None):
+def create_asset_cache(xml_file, output_dir, asset_dir=None, max_depth=None):
     """
     Create an asset cache from XML file by:
     1. Extracting file paths from XML
@@ -157,6 +163,7 @@ def create_asset_cache(xml_file, output_dir, asset_dir=None):
         xml_file: Path to XML file
         output_dir: Directory to store cached assets
         asset_dir: Optional base directory for resolving relative paths
+        max_depth: Maximum depth of parent directories to preserve (None for unlimited)
         
     Returns:
         tuple: (Path to transformed XML file, dict mapping original paths to cached paths)
@@ -176,7 +183,7 @@ def create_asset_cache(xml_file, output_dir, asset_dir=None):
     logger.info(f"Found {len(paths)} paths in XML file")
     
     # Flatten paths
-    flattened_paths = flatten_paths(paths, base_dir=asset_dir)
+    flattened_paths = flatten_paths(paths, base_dir=asset_dir, max_depth=max_depth)
     
     # Copy files to output directory with flattened names
     copied_paths = {}
@@ -242,13 +249,14 @@ class AssetCache:
         self.cache_dir.mkdir(exist_ok=True, parents=True)
         logger.info(f"Initialized AssetCache with cache directory: {self.cache_dir}")
     
-    def process_xml(self, xml_file, asset_dir=None):
+    def process_xml(self, xml_file, asset_dir=None, max_depth=None):
         """
         Process an XML file to create a cached version with flattened asset paths.
         
         Args:
             xml_file: Path to XML file
             asset_dir: Optional base directory for resolving relative paths
+            max_depth: Maximum depth of parent directories to preserve (None for unlimited)
             
         Returns:
             Path: Path to the transformed XML file
@@ -257,7 +265,7 @@ class AssetCache:
         xml_name = xml_file.stem
         output_dir = self.cache_dir / xml_name
         
-        transformed_xml_path, _ = create_asset_cache(xml_file, output_dir, asset_dir)
+        transformed_xml_path, _ = create_asset_cache(xml_file, output_dir, asset_dir, max_depth)
         
         return transformed_xml_path
 
@@ -266,7 +274,7 @@ def main():
     """
     Command-line interface for the asset cache.
     
-    Usage: python -m asset_cache.asset_cache <xml_file> [--cache-dir CACHE_DIR] [--asset-dir ASSET_DIR]
+    Usage: python -m asset_cache.asset_cache <xml_file> [--cache-dir CACHE_DIR] [--asset-dir ASSET_DIR] [--max-depth MAX_DEPTH]
     """
     import argparse
     
@@ -274,11 +282,12 @@ def main():
     parser.add_argument("xml_file", help="Path to XML file containing asset references")
     parser.add_argument("--cache-dir", help="Directory to store cached assets", default="./asset_cache")
     parser.add_argument("--asset-dir", help="Base directory for resolving relative paths in XML")
+    parser.add_argument("--max-depth", type=int, help="Maximum depth of parent directories to preserve (None for unlimited)")
     
     args = parser.parse_args()
     
     cache = AssetCache(args.cache_dir)
-    transformed_xml = cache.process_xml(args.xml_file, args.asset_dir)
+    transformed_xml = cache.process_xml(args.xml_file, args.asset_dir, args.max_depth)
     
     logger.info(f"Successfully created asset cache. Transformed XML available at: {transformed_xml}")
 
